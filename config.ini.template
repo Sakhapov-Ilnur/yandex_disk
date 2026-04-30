@@ -1,0 +1,7 @@
+[default]
+HOST_API = 'URL API Яндекс.Диска (https://cloud-api.yandex.net/v1/disk/resources)'
+API_KEY = 'Ваш API ключ для Яндекс.Диска'
+LOCAL_DIR_PATH = 'Локальная папка для синхронизации (C:\_yadisk)'
+REMOTE_DIR_PATH = 'Название папки на ЯндексюДиске (_yadisk)'
+SYNCHRONIZATION_PERIOD = 'период синхронизации в секундах (60)'
+LOG_FILE = 'Название log-файла (logger.log)'

@@ -21,7 +21,7 @@ class API:
                         'Accept': 'application/json',
                         'Authorization': f'OAuth {self.API_KEY}'}
 
-    def check_directory(self) -> tuple[str, dict[str, str]]:
+    def check_directory(self) -> tuple[int, dict[str, str]]:
         """
         Метаинформация о папке на Яндекс.Диске
         :return:
@@ -33,7 +33,7 @@ class API:
         result = response.json()
         return status_code, result
 
-    def check_files(self) -> tuple[str, list[str]]:
+    def get_info(self) -> tuple[int, list[str]]:
         """
         Плоский список всех файлов в папке на Яндекс.Диске
         :return:
@@ -46,7 +46,7 @@ class API:
         result = [item['name'] for item in result]
         return status_code, result
 
-    def create_directory(self, timeout=1) -> tuple[str, dict[str, str]]:
+    def create_directory(self, timeout=1) -> tuple[int, dict[str, str]]:
         """
         Создание папки на Яндекс.Диске
         :param timeout:
@@ -60,7 +60,7 @@ class API:
         result = response.json()
         return status_code, result
 
-    def __upload_file(self, filename, replace=True) -> str:
+    def load(self, filename, replace=True) -> int:
         """
         Загрузка файла в папку на Яндекс.Диске
         :param filename: str
@@ -85,9 +85,9 @@ class API:
         :param files: list
         """
         with ThreadPool(processes=cpu_count()) as pool:
-            pool.map(self.__upload_file, files)
+            pool.map(self.load, files)
 
-    def __delete_file(self, filename) -> str:
+    def delete(self, filename) -> int:
         """
         Удаление файла из папки на Яндекс.Диске
         :param filename: str
@@ -105,9 +105,9 @@ class API:
        :param files: list
        """
         with ThreadPool(processes=cpu_count()) as pool:
-            pool.map(self.__delete_file, files)
+            pool.map(self.delete, files)
 
-    def delete_remote_folder(self) -> str:
+    def delete_remote_folder(self) -> int:
         """
         Удаление папки на Яндекс.Диске
         :return:
@@ -122,6 +122,6 @@ if __name__ == '__main__':
     # print(url.check_directory())
     # print(url.create_directory())
     url.upload_files(["bash.pdf"])
-    print(url.check_files())
+    print(url.get_info())
     url.delete_files(['bash.pdf'])
-    print(url.check_files())
+    print(url.get_info())

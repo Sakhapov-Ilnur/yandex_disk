@@ -34,7 +34,7 @@ class Synchronization:
                 exit(-1)
         else:
             app_logger.info(f'Папка "{REMOTE_DIR_PATH}" на "яндекс.диске" доступна')
-            status_code, self.remote_files = self.yandex_disk.check_files()
+            status_code, self.remote_files = self.yandex_disk.get_info()
             app_logger.info(f'Количество файлов на "яндекс.диске": {len(self.remote_files)}')
 
         if not os.path.exists(DATA_FILE):
@@ -70,7 +70,7 @@ class Synchronization:
             app_logger.info(f'Выгружено измененных  файлов: {len(_upload)}')
         local_files = [item[0] for item in self.folder.get_files()]
         self.local_files = local_files
-        self.remote_files = self.yandex_disk.check_files()[1]
+        self.remote_files = self.yandex_disk.get_info()[1]
         extra_files = set(self.remote_files) - set(self.local_files)
         if extra_files:
             self.yandex_disk.delete_files(list(extra_files))
@@ -79,7 +79,7 @@ class Synchronization:
             self.yandex_disk.upload_files(list(missing_files))
         local_files = [item[0] for item in self.folder.get_files()]
         self.local_files = local_files
-        self.remote_files = self.yandex_disk.check_files()[1]
+        self.remote_files = self.yandex_disk.get_info()[1]
 
     def start(self, period=int(SYNCHRONIZATION_PERIOD)):
         """
