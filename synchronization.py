@@ -10,7 +10,6 @@ import os
 
 class Synchronization:
     """
-        Удаление папки на Яндекс.Диске
         Класс синхронизации локальной папки и папки на Яндекс.Диске
      """
     def __init__(self):
@@ -103,7 +102,6 @@ class Synchronization:
         if os.path.exists(LOG_FILE):
             app_logger.remove()
             os.remove(LOG_FILE)
-        exit()
 
 
 if __name__ == '__main__':

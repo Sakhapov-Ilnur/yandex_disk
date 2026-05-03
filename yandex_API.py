@@ -3,9 +3,8 @@
 """
 import os.path
 import time
-
 import requests
-from settings import HOST_API, API_KEY, LOCAL_DIR_PATH, REMOTE_DIR_PATH
+from settings import HOST_API, API_KEY, LOCAL_DIR_PATH, REMOTE_DIR_PATH, app_logger
 from multiprocessing import cpu_count
 from multiprocessing.pool import ThreadPool
 
@@ -14,6 +13,20 @@ class API:
     """
         Класс взаимодействия с папкой на Яндекс.Диске
     """
+    ERRORS = {
+        400: 'Некорректные данные.',
+        401: 'Не авторизован.',
+        403: 'API недоступно.Ваши файлы занимают больше места, чем у вас есть.Удалите лишнее или увеличьте объём Диска.',
+        404: 'Не удалось найти запрошенный ресурс.',
+        406: 'Ресурс не может быть представлен в запрошенном формате.',
+        409: 'Ресурс по указанному пути уже существует.',
+        413: 'Загрузка файла недоступна, файл слишком большой(UPLOAD_FILE_SIZE_LIMIT_EXCEEDED).',
+        423: 'Загрузка файлов недоступна, можно только просматривать и скачивать.',
+        429: 'Слишком много запросов.',
+        503: 'Сервис временно недоступен.',
+        507: 'Недостаточно свободного места.'
+    }
+
     def __init__(self):
         self.URL = HOST_API
         self.API_KEY = API_KEY
@@ -28,9 +41,14 @@ class API:
         status_code: str
         result: dict[str, str]
         """
-        response = requests.get(f'{self.URL}?path={REMOTE_DIR_PATH}', headers=self.headers)
-        status_code = response.status_code
-        result = response.json()
+        status_code, result = None, None
+        try:
+            response = requests.get(f'{self.URL}?path={REMOTE_DIR_PATH}', headers=self.headers, timeout=5)
+            status_code = response.status_code
+            result = response.json()
+        except Exception as exc:
+            app_logger.error(exc)
+
         return status_code, result
 
     def get_info(self) -> tuple[int, list[str]]:
@@ -119,9 +137,9 @@ class API:
 
 if __name__ == '__main__':
     url = API()
-    # print(url.check_directory())
+    print(url.check_directory())
     # print(url.create_directory())
-    url.upload_files(["bash.pdf"])
-    print(url.get_info())
-    url.delete_files(['bash.pdf'])
-    print(url.get_info())
+    # url.upload_files(["bash.pdf"])
+    # print(url.get_info())
+    # url.delete_files(['bash.pdf'])
+    # print(url.get_info())
