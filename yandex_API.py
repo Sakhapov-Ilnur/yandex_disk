@@ -1,7 +1,6 @@
 """
     Модуль взаимодействия с API yandex.диска
 """
-import json
 import os.path
 import time
 import requests
@@ -14,20 +13,6 @@ class API:
     """
         Класс взаимодействия с папкой на Яндекс.Диске
     """
-    ERRORS = {
-        400: 'Некорректные данные.',
-        401: 'Не авторизован.',
-        403: 'API недоступно.Ваши файлы занимают больше места, чем у вас есть.Удалите лишнее или увеличьте объём Диска.',
-        404: 'Не удалось найти запрошенный ресурс.',
-        406: 'Ресурс не может быть представлен в запрошенном формате.',
-        409: 'Ресурс по указанному пути уже существует.',
-        413: 'Загрузка файла недоступна, файл слишком большой(UPLOAD_FILE_SIZE_LIMIT_EXCEEDED).',
-        423: 'Загрузка файлов недоступна, можно только просматривать и скачивать.',
-        429: 'Слишком много запросов.',
-        503: 'Сервис временно недоступен.',
-        507: 'Недостаточно свободного места.'
-    }
-
     def __init__(self):
         self.URL = HOST_API
         self.API_KEY = API_KEY
@@ -52,14 +37,15 @@ class API:
 
         return status_code, result
 
-    def get_info(self) -> tuple[int, list[str]]:
+    def get_info(self, timeout=5) -> tuple[int, list[str]]:
         """
         Список всех файлов в папке на Яндекс.Диске
         :return:
         status_code: str
         result: list[str]
         """
-        response = requests.get(f'{self.URL}?path={REMOTE_DIR_PATH}&fields=_embedded.items.name', headers=self.headers)
+        response = requests.get(f'{self.URL}?path={REMOTE_DIR_PATH}&fields=_embedded.items.name',
+                                headers=self.headers, timeout=timeout)
         status_code = response.status_code
         result = response.json()['_embedded']['items']
         result = [item['name'] for item in result]
