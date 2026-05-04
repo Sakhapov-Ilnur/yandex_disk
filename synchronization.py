@@ -30,7 +30,7 @@ class Synchronization:
                 app_logger.info(f'Папка "{REMOTE_DIR_PATH}" создана')
             else:
                 app_logger.error(f'Работа не возможна!!!\n\t -> {status_code, response}')
-                exit(-1)
+                return
         else:
             app_logger.info(f'Папка "{REMOTE_DIR_PATH}" на "яндекс.диске" доступна')
             status_code, self.remote_files = self.yandex_disk.get_info()

@@ -1,6 +1,7 @@
 """
     Модуль взаимодействия с API yandex.диска
 """
+import json
 import os.path
 import time
 import requests
@@ -53,14 +54,14 @@ class API:
 
     def get_info(self) -> tuple[int, list[str]]:
         """
-        Плоский список всех файлов в папке на Яндекс.Диске
+        Список всех файлов в папке на Яндекс.Диске
         :return:
         status_code: str
         result: list[str]
         """
-        response = requests.get(f'{self.URL}/files?fields=items.name', headers=self.headers)
+        response = requests.get(f'{self.URL}?path={REMOTE_DIR_PATH}&fields=_embedded.items.name', headers=self.headers)
         status_code = response.status_code
-        result = response.json()['items']
+        result = response.json()['_embedded']['items']
         result = [item['name'] for item in result]
         return status_code, result
 
@@ -138,6 +139,7 @@ class API:
 if __name__ == '__main__':
     url = API()
     print(url.check_directory())
+    url.get_info()
     # print(url.create_directory())
     # url.upload_files(["bash.pdf"])
     # print(url.get_info())
