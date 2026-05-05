@@ -2,8 +2,6 @@ import functools
 import time
 import requests
 from requests.exceptions import RequestException
-
-import yandex_API
 from settings import app_logger
 
 ERRORS = {
@@ -34,7 +32,6 @@ def request_exception_handler(logger=app_logger, max_retries=3, backoff_factor=0
                     kwargs.setdefault('timeout', timeout)
 
                     result = func(*args, **kwargs)
-                    result.raise_for_status()
                     return result
                 except requests.HTTPError as http_err:
                     # Обработка ошибок HTTP-статусов
@@ -64,70 +61,64 @@ def request_exception_handler(logger=app_logger, max_retries=3, backoff_factor=0
 
 
 # Пример использования
-@request_exception_handler(max_retries=3)
-def get_data(timeout):
-    yandex_API.API().get_info(timeout=timeout)
+# @request_exception_handler(max_retries=3)
+# def get_data(timeout):
+#     yandex_API.API().get_info(timeout=timeout)
 
 
-class manager:
-    def __init__(self, file_path):
-        self.file_path = file_path
-
-    def __enter__(self):
-        print('start enter')
-        try:
-            raise RuntimeError("test")
-        except Exception as ex:
-            self.__exit__(type(ex), ex, ex.__traceback__)
-            raise ex
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        print('start exit')
-
-
-# Пример использования
-with manager(r'<path to>.json') as res:
-    pass
-
-
-class SafeSession:
-    def __init__(self, base_url=None, timeout=10):
+class SafeRequest:
+    """Контекстный менеджер для безопасного выполнения HTTP-запросов с повторными попытками."""
+    def __init__(self, method, url, **kwargs):
         self.session = requests.Session()
-        self.base_url = base_url
-        self.timeout = timeout
+        self.method = method
+        self.url = url
+        self.kwargs = kwargs
 
     def __enter__(self):
-        return self
+        retries = 0
+        max_retries = 10
+        backoff_factor = 0.3
+        try:
+            self.kwargs.setdefault('timeout', 10)
+            response = getattr(self.session, self.method)(self.url, **self.kwargs)
+            response.raise_for_status()
+            return response
+        except requests.HTTPError as e:
+            # Обработка ошибок HTTP-статусов
+            status_code = e.response.status_code
+            if status_code in ERRORS:
+                app_logger.error(f'{status_code} - {ERRORS.get(status_code)}')
+            else:
+                app_logger.error(f'{status_code} - неизвестная ошибка!!!')
+            self.__exit__(type(e), e, e.__traceback__)
+        except (requests.ConnectionError, requests.Timeout) as e:
+            retries += 1
+            if retries > max_retries:
+                app_logger.error(f"Достигнут лимит повторных попыток ({max_retries})")
+                self.__exit__(type(e), e, e.__traceback__)
+
+            # Экспоненциальная задержка
+            wait = backoff_factor * (2 ** (retries - 1))
+            app_logger.warning(f"Попытка {retries}/{max_retries} не удалась из-за {e.__class__.__name__}. "
+                               f"Повторная попытка через {wait:.1f} сек...")
+            time.sleep(wait)
+        except RequestException as e:
+            app_logger.error(f"Ошибка запроса {e.__class__.__name__}: {e}")
+            self.__exit__(type(e), e, e.__traceback__)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.session.close()
-
-    def get(self, url_path, **kwargs):
-        if self.base_url and not url_path.startswith(('http://', 'https://')):
-            url = f"{self.base_url.rstrip('/')}/{url_path.lstrip('/')}"
-        else:
-            url = url_path
-
-        kwargs.setdefault('timeout', self.timeout)
-
-        try:
-            response = self.session.get(url, **kwargs)
-            response.raise_for_status()
-            return response
-        except RequestException as e:
-            print(f"Ошибка при запросе {url}: {e}")
-            raise
-
-
-# Пример использования
-with SafeSession(base_url='https://api.example.com') as session:
-    try:
-        response = session.get('/users')
-        data = response.json()
-        print(data)
-    except Exception as e:
-        print(f"Произошла ошибка: {e}")
+        return True
 
 
 if __name__ == '__main__':
-    get_data()
+    with SafeRequest(method='get',
+                     url='https://cloud-api.yandex.net/v1/disk/resources/56?path=_yadisk&fields=_embedded.items.name',
+                     headers={'Content-Type': 'application/json',
+                              'Accept': 'application/json',
+                              'Authorization': f'OAuth y0__wgBEMqq3ggY25YDIMGymZoXMPCfvdoH7_p0DAlBFxPtrD8MTDCp2n5Q4Lg'},
+                     timeout=10) as session:
+        status_code = session.status_code
+        result = session.json()
+    print(status_code)
+    print(result)
