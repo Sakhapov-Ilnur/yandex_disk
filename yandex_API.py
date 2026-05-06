@@ -3,10 +3,10 @@
 """
 import os.path
 import time
-import requests
 from settings import HOST_API, API_KEY, LOCAL_DIR_PATH, REMOTE_DIR_PATH, app_logger
 from multiprocessing import cpu_count
 from multiprocessing.pool import ThreadPool
+from exception_handler import SafeRequest
 
 
 class API:
@@ -27,13 +27,11 @@ class API:
         status_code: str
         result: dict[str, str]
         """
-        status_code, result = None, None
-        try:
-            response = requests.get(f'{self.URL}?path={REMOTE_DIR_PATH}', headers=self.headers, timeout=5)
+        with SafeRequest(method='get', url=f'{self.URL}?path={REMOTE_DIR_PATH}',
+                         headers=self.headers,
+                         timeout=5) as response:
             status_code = response.status_code
             result = response.json()
-        except Exception as exc:
-            app_logger.error(exc)
 
         return status_code, result
 
@@ -44,12 +42,12 @@ class API:
         status_code: str
         result: list[str]
         """
-        response = requests.get(f'{self.URL}?path={REMOTE_DIR_PATH}&fields=_embedded.items.name',
-                                headers=self.headers, timeout=timeout)
-        status_code = response.status_code
-        result = response.json()['_embedded']['items']
-        result = [item['name'] for item in result]
-        return status_code, result
+        with SafeRequest(method='get', url=f'{self.URL}?path={REMOTE_DIR_PATH}&fields=_embedded.items.name',
+                         headers=self.headers, timeout=timeout) as response:
+            status_code = response.status_code
+            result = response.json()['_embedded']['items']
+            result = [item['name'] for item in result]
+            return status_code, result
 
     def create_directory(self, timeout=1) -> tuple[int, dict[str, str]]:
         """
@@ -59,10 +57,10 @@ class API:
         status_code: str
         result: dict
         """
-        response = requests.put(f'{self.URL}?path={REMOTE_DIR_PATH}', headers=self.headers)
-        time.sleep(timeout)
-        status_code = response.status_code
-        result = response.json()
+        with SafeRequest(method='put', url=f'{self.URL}?path={REMOTE_DIR_PATH}', headers=self.headers) as response:
+            time.sleep(timeout)
+            status_code = response.status_code
+            result = response.json()
         return status_code, result
 
     def load(self, filename, replace=True) -> int:
@@ -75,14 +73,13 @@ class API:
         """
         loadfile = os.path.join(LOCAL_DIR_PATH, filename)
         savefile = f"{REMOTE_DIR_PATH}/{filename}"
-        res = requests.get(f'{self.URL}/upload'
-                           f'?path={savefile}'
-                           f'&overwrite={replace}',
-                           headers=self.headers)
-        response_json = res.json()
-        with open(loadfile, 'rb') as file:
-            result = requests.put(response_json['href'], files={'file': file})
-        return result.status_code
+        with SafeRequest(method='get', url=f'{self.URL}/upload?path={savefile}&overwrite={replace}',
+                         headers=self.headers) as response:
+            response_json = response.json()
+            with open(loadfile, 'rb') as file:
+                with SafeRequest(method='put', url=response_json['href'], files={'file': file}) as result:
+                    status_code = result.status_code
+        return status_code
 
     def upload_files(self, files: list) -> None:
         """
@@ -100,9 +97,9 @@ class API:
         status_code: str
         """
         deleted_file = f"{REMOTE_DIR_PATH}/{filename}"
-        result = requests.delete(f'{self.URL}/?path={deleted_file}', headers=self.headers)
-        # response_json = result.json()
-        return result.status_code
+        with SafeRequest(method='delete', url=f'{self.URL}/?path={deleted_file}', headers=self.headers) as response:
+            result = response.status_code
+        return result
 
     def delete_files(self, files: list) -> None:
         """
@@ -118,14 +115,15 @@ class API:
         :return:
         status_code: str
         """
-        result = requests.delete(f'{self.URL}/?path={REMOTE_DIR_PATH}', headers=self.headers)
-        return result.status_code
+        with SafeRequest(method='delete', url=f'{self.URL}/?path={REMOTE_DIR_PATH}', headers=self.headers) as response:
+            result = response.status_code
+        return result
 
 
 if __name__ == '__main__':
     url = API()
     print(url.check_directory())
-    url.get_info()
+    print(url.get_info())
     # print(url.create_directory())
     # url.upload_files(["bash.pdf"])
     # print(url.get_info())
